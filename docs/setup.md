@@ -117,4 +117,4 @@ Enough for the ranting, lets setup our directory hierarchy:
 	cd $EFS_ROOT
 
 ### Next guide
-* [Building the cross-toolchain](docs/crosscc.md).
+* [Building the cross-toolchain](crosscc.md).
