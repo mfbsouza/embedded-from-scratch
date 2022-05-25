@@ -5,7 +5,7 @@ our mini distro, as well as the basic directory setup before we get started.
 
 ## Prerequisites
 
-For compiling the packages you will need:
+For compiling the packages you will need to have installed in local machine:
 
 * gcc
 * g++
@@ -41,12 +41,11 @@ First of all, you should create an empty directory somewhere where you want
 to build the cross toolchain and later the entire system.
 
 For convenience, we will store the absolute path to this directory inside a
-shell variable called **BUILDROOT** and create a few directories to organize
+shell variable called **EFS_ROOT** and create a few directories to organize
 our stuff in:
 
-    BUILDROOT=$(pwd)
-
-    mkdir -p "build" "src" "download" "toolchain/bin" "sysroot"
+	EFS_ROOT=$(pwd)
+	mkdir -p build src download toolchain/bin sysroot
 
 I stored the downloaded packages in the **download** directory and extracted
 them to a directory called **src**.
@@ -60,17 +59,15 @@ We store the toolchain location inside another shell variable that I called
 **TCDIR** and prepend the executable path of our toolchain to the **PATH**
 variable:
 
-    TCDIR="$BUILDROOT/toolchain"
-    export PATH="$TCDIR/bin:$PATH"
-
+	TCDIR=$EFS_ROOT/toolchain
+	export PATH=$TCDIR/bin:$PATH
 
 The **sysroot** directory will hold the cross compiled binaries for our target
 system, as well as headers and libraries used for cross compiling stuff. It is
 basically the `/` directory of the system we are going to build. For
 convenience, we will also store its absolute path in a shell variable:
 
-    SYSROOT="$BUILDROOT/sysroot"
-
+	SYSROOT=$EFS_ROOT/sysroot
 
 ### The Filesystem Hierarchy
 
@@ -106,13 +103,18 @@ Anyway, for the system we are building, I will get rid of the pointless `/bin`
 and `/sbin` split, as well as the `/usr` sub-hiearchy split, but some programs
 are stubborn and use hard coded paths (remember the last time you
 used `#!/usr/bin/env` to make a script "portable"? You just replaced one
-portabillity problem with another one). So we will set up symlinks in `/usr`
-pointing back to `/bin` and `/lib`.
+portabillity problem with another one). So we will set up symlinks in `/`
+pointing to `/usr/bin`, `/usr/lib` and `/usr/sbin`.
 
 Enough for the ranting, lets setup our directory hierarchy:
 
-    mkdir -p "$SYSROOT/bin" "$SYSROOT/lib"
-    mkdir -p "$SYSROOT/usr/share" "$SYSROOT/usr/include"
+	mkdir -p $SYSROOT/usr/bin $SYSROOT/usr/lib $SYSROOT/usr/sbin
+	mkdir -p $SYSROOT/usr/share $SYSROOT/usr/include
+	cd $SYSROOT
+	ln -s usr/bin ./bin
+	ln -s usr/lib ./lib
+	ln -s usr/sbin ./sbin
+	cd $EFS_ROOT
 
-    ln -s "../bin" "$SYSROOT/usr/bin"
-    ln -s "../lib" "$SYSROOT/usr/lib"
+### Next guide
+* [Building the cross-toolchain](docs/crosscc.md).
