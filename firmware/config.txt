@@ -1,3 +1,0 @@
-dtparam=
-kernel=zImage
-initramfs initramfs.xz followkernel

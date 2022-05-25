@@ -11,13 +11,14 @@ In contrast to similar guides, I try to explain why we are doing the things
 the way we are doing them, instead of just throwing a bunch of copy-paste
 command lines around (I'm looking at you, LFS).
 
+## Content
+
 This guide is divided into the following parts:
 
-* [host machine setup](scripts/setup.md). 
-	* Lists some tools that you should have installed and walks through 
-	the steps of setting up the directory tree that we work in, as well as 
-	a few handy environment variables.
-* [Building a cross-toolchain](scripts/crosscc.md).
+* [host machine setup](docs/setup.md). 
+	* Tools that you should have installed and steps to setup the 
+	directory tree that we work in.
+* [Building a cross-toolchain](docs/crosscc.md).
 	* Steps to compile a cross compiler toolchain and creating a sysroot 
 	directory
 
