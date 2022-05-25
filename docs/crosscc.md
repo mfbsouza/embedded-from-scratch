@@ -1,64 +1,68 @@
 # Building a Cross Compiler Toolchain
 
+First of all, if you quite don't know what a toolchain is and what it's usually
+made of, have a look at the awesome crosstool-ng's 
+[how a toolchain is contructed](https://crosstool-ng.github.io/docs/toolchain-construction/).
+
 As it turns out, building a cross compiler toolchain with recent GCC and
 binutils is a lot easier nowadays than it used to be.
 
-I'm building the toolchain on an AMD64 (aka x86_64) system. The steps have
-been tried on [Fedora](https://getfedora.org/) as well as on
-[OpenSUSE](https://www.opensuse.org/).
+I'm building the toolchain on an AMD64 (aka x86_64) system running 
+[Fedora](https://getfedora.org/) Linux but the steps should work for any linux
+distro.
 
-The toolchain we are building generates 32 bit ARM code intended to run on
-a Raspberry Pi 3. [Musl](https://www.musl-libc.org/) is used as a C standard
-library implementation.
+The toolchain we are building generates 32 bit ARM code intended to run on 
+a Beaglebone Black, but the ideia of this guide it's that you can easily
+change some steps to target your board or virtual board in case of qemu 
+emulation. [Musl](https://www.musl-libc.org/) is used as a C standard library 
+implementation but there is also GLibc and uClibc.
 
 ## Downloading and unpacking everything
 
 The following source packages are required for building the toolchain. The
 links below point to the exact versions that I used.
 
-* [Linux](https://github.com/raspberrypi/linux/archive/raspberrypi-kernel_1.20201201-1.tar.gz).
+* [Linux](https://kernel.org/).
   Linux is a very popular OS kernel that we will use on our target system.
-  We need it to build the the C standard library for our toolchain.
-* [Musl](https://www.musl-libc.org/releases/musl-1.2.2.tar.gz). A tiny
-  C standard library implementation.
-* [Binutils](https://ftp.gnu.org/gnu/binutils/binutils-2.36.tar.xz). This
-  contains the GNU assembler, linker and various tools for working with
-  executable files.
-* [GCC](https://ftp.gnu.org/gnu/gcc/gcc-10.2.0/gcc-10.2.0.tar.xz), the GNU
-  compiler collection. Contains compilers for C and other languages.
+  We need it (specifically the kernel headers) to build the the C standard 
+  library for our toolchain.
+* [Musl](https://www.musl-libc.org/). A tiny C standard library implementation.
+* [Binutils](https://www.gnu.org/software/binutils/). This contains the GNU
+  assembler, linker and various tools for working with executable files.
+* [GCC](https://gcc.gnu.org/), the GNU compiler collection. Contains compilers 
+  for C and other languages.
 
-Simply download the packages listed above into `download` and unpack them
-into `src`.
-
-For convenience, I provided a small shell script called `download.sh` that,
-when run inside `$BUILDROOT` does this and also verifies the `sha256sum`
-of the packages, which will further make sure that you are using the **exact**
-same versions as I am.
+Simply download the packages listed and unpack them into `src`.
 
 Right now, you should have a directory tree that looks something like this:
 
-* build/
-* toolchain/
-   * bin/
-* src/
-   * binutils-2.36/
-   * gcc-10.2.0/
-   * musl-1.2.2/
-   * linux-raspberrypi-kernel_1.20201201-1/
-* download/
-   * binutils-2.36.tar.xz
-   * gcc-10.2.0.tar.xz
-   * musl-1.2.2.tar.gz
-   * raspberrypi-kernel_1.20201201-1.tar.gz
-* sysroot/
+.
+├── build
+├── src
+│   ├── binutils-VERSION
+│   ├── gcc-VERSION
+│   ├── linux-VERSION
+│   └── musl-VERSION
+├── sysroot
+│   ├── bin -> usr/bin
+│   ├── lib -> usr/lib
+│   ├── sbin -> usr/sbin
+│   └── usr
+│       ├── bin
+│       ├── include
+│       ├── lib
+│       ├── sbin
+│       └── share
+└── toolchain
+    └── bin
 
 For building GCC, we will need to download some additional support libraries.
 Namely gmp, mfpr, mpc and isl that have to be unpacked inside the GCC source
 tree. Luckily, GCC nowadays provides a shell script that will do that for us:
 
-	cd "$BUILDROOT/src/gcc-10.2.0"
+	cd $EFS_ROOT/src/gcc-VERSION
 	./contrib/download_prerequisites
-	cd "$BUILDROOT"
+	cd $EFS_ROOT
 
 
 # Overview
@@ -78,10 +82,11 @@ First of all, the GCC build system needs to know *what* kind of C standard
 library we are using and *where* to find it. For dynamically linked programs,
 it also needs to know what loader we are going to use, which is typically
 also provided by the C standard library. For more details, you can read this
-high level overview [how dyncamically linked ELF programs are run](elfstartup.md).
+high level overview 
+[how dyncamically linked ELF programs are run](docs/elfstartup.md).
 
 Second, there is [libgcc](https://gcc.gnu.org/onlinedocs/gccint/Libgcc.html).
-`libgcc` contains low level platform specific helpers (like exception handling,
+`libgcc` contains low level platform specific helpers (like exception handling, 
 soft float code, etc.) and is automatically linked to programs built with GCC.
 Libgcc source code comes with GCC and is compiled by the GCC build system
 specifically for our cross compiler & libc combination.
@@ -133,9 +138,9 @@ release tarballs just uses shell and `make`.
 Pretty much every novice Ubuntu user has probably already seen this on Stack
 Overflow (and copy-pasted it) at least once:
 
-    ./configure
-    make
-    make install
+	./configure
+	make
+	make install
 
 
 The `configure` shell script generates the actual `Makefile` from a
@@ -147,8 +152,8 @@ from autotools and were generated by `autoconf` and `automake`.
 If we don't want to clobber the source tree, we can also build a package
 *outside the source tree* like this:
 
-    ../path/to/source/configure
-    make
+	../path/to/source/configure
+	make
 
 The `configure` script contains *a lot* of system checks and default flags that
 we can use for telling the build system how to compile the code.
@@ -266,11 +271,11 @@ find its files.
 At first, we set a few handy shell variables that will store the configuration
 of our toolchain:
 
-    TARGET="arm-linux-musleabihf"
+	TARGET="arm-linux-musleabihf"
 	HOST="x86_64-linux-gnu"
-    LINUX_ARCH="arm"
-    MUSL_CPU="arm"
-    GCC_CPU="armv6"
+	TARGET_CPU="arm"
+	TARGET_ARCH="armv7"
+	TARGET_FPU="vfpv3"
 
 The **TARGET** variable holds the *target triplet* of our system as described
 above.
@@ -278,34 +283,25 @@ above.
 We also need the triplet for the local machine that we are going to build
 things on. For simplicity, I also set this manually.
 
-The **MUSL_CPU**, **GCC_CPU** and **LINUX_ARCH** variables hold the target
-CPU architecture. The variables are used for musl, gcc and linux respecitively,
-because they cannot agree on consistent architecture names (except sometimes).
+The **TARGET_CPU**, **TARGET_ARCH** and **TARGET_FPU** variables hold the target
+CPU architecture. The variables are used for musl, gcc and linux.
 
 ### Installing the kernel headers
 
-We create a build directory called **$BUILDROOT/build/linux**. Building the
+We create a build directory called **$EFS_ROOT/build/linux**. Building the
 kernel outside its source tree works a bit different compared to autotools
 based stuff.
 
-To keep things clean, we use a shell variable **srcdir** to remember where
-we kept the kernel source. A pattern that we will repeat later:
-
-    export KBUILD_OUTPUT="$BUILDROOT/build/linux"
-    mkdir -p "$KBUILD_OUTPUT"
-
-    srcdir="$BUILDROOT/src/linux-raspberrypi-kernel_1.20201201-1"
-
-    cd "$srcdir"
-    make O="$KBUILD_OUTPUT" ARCH="$LINUX_ARCH" headers_check
-    make O="$KBUILD_OUTPUT" ARCH="$LINUX_ARCH" INSTALL_HDR_PATH="$SYSROOT/usr" headers_install
-    cd "$BUILDROOT"
+	mkdir -p $EFS_ROOT/build/linux
+	cd $EFS_ROOT/src/linux-VERSION
+	make O=$EFS_ROOT/build/linux ARCH=$TARGET_CPU headers_check
+	make O=$EFS_ROOT/build/linux ARCH=$TARGET_CPU INSTALL_HDR_PATH=$SYSROOT/usr headers_install
+	cd $EFS_ROOT
 
 
 According to the Makefile in the Linux source, you can either specify an
 environment variable called **KBUILD_OUTPUT**, or set a Makefile variable
-called **O**, where the later overrides the environment variable. The snippet
-above shows both ways.
+called **O**.
 
 The *headers_check* target runs a few trivial sanity checks on the headers
 we are going to install. It checks if a header includes something nonexistent,
@@ -341,14 +337,12 @@ We will compile binutils outside the source tree, inside the directory
 **build/binutils**. So first, we create the build directory and switch into
 it:
 
-    mkdir -p "$BUILDROOT/build/binutils"
-    cd "$BUILDROOT/build/binutils"
-
-    srcdir="$BUILDROOT/src/binutils-2.36"
+	mkdir -p $EFS_ROOT/build/binutils
+	cd $EFS_ROOT/build/binutils
 
 From the binutils build directory we run the configure script:
 
-    $srcdir/configure --prefix="$TCDIR" --target="$TARGET" \
+	../../src/binutils-VERSION/configure --prefix="$TCDIR" --target="$TARGET" \
                       --with-sysroot="$SYSROOT" \
                       --disable-nls --disable-multilib
 
@@ -384,10 +378,10 @@ set **--disable-multilib**.
 
 Now we can compile and install binutils:
 
-    make configure-host
-    make
+    make configure-host -j$(nproc)
+    make -j$(nproc)
     make install
-    cd "$BUILDROOT"
+    cd $EFS_ROOT
 
 The first make target, *configure-host* is binutils specific and just tells it
 to check out the system it is *being built on*, i.e. your local machine and
@@ -413,10 +407,8 @@ linker scripts.
 Similar to above, we create a directory for building the compiler, change
 into it and store the source location in a variable:
 
-    mkdir -p "$BUILDROOT/build/gcc-1"
-    cd "$BUILDROOT/build/gcc-1"
-
-    srcdir="$BUILDROOT/src/gcc-10.2.0"
+	mkdir -p $EFS_ROOT/build/gcc-1
+	cd $EFS_ROOT/build/gcc-1
 
 Notice, how the build directory is called *gcc-1*. For the second pass, we
 will later create a different build directory. Not only does this out of tree
@@ -424,16 +416,16 @@ build allow us to cleanly start afresh (because the source is left untouched),
 but current versions of GCC will *flat out refuse* to build inside the
 source tree.
 
-    $srcdir/configure --prefix="$TCDIR" --target="$TARGET" --build="$HOST" \
-                      --host="$HOST" --with-sysroot="$SYSROOT" \
+    $../../src/gcc-VERSION/configure --prefix=$TCDIR --target=$TARGET --build=$HOST \
+                      --host=$HOST --with-sysroot=$SYSROOT \
                       --disable-nls --disable-shared --without-headers \
                       --disable-multilib --disable-decimal-float \
                       --disable-libgomp --disable-libmudflap \
                       --disable-libssp --disable-libatomic \
                       --disable-libquadmath --disable-threads \
                       --enable-languages=c --with-newlib \
-                      --with-arch="$GCC_CPU" --with-float=hard \
-                      --with-fpu=neon-vfpv3
+                      --with-arch=$TARGET_ARCH --with-float=hard \
+                      --with-fpu=$TARGET_FPU
 
 The **--prefix**, **--target** and **--with-sysroot** work just like above for
 binutils.
@@ -470,10 +462,9 @@ If you are interested: [Here is a detailed list of all GCC configure options.](h
 
 Now, lets build the compiler and `libgcc`:
 
-    make all-gcc all-target-libgcc
-    make install-gcc install-target-libgcc
-
-    cd "$BUILDROOT"
+	make -j$(nproc) all-gcc all-target-libgcc
+	make -j$(nproc) install-gcc install-target-libgcc
+	cd $EFS_ROOT
 
 We explicitly specify the make targets for *GCC* and *cross-compiled libgcc*
 for our target. We are not interested in anything else.
@@ -486,16 +477,14 @@ on an ordinary desktop machine.
 
 We create our build directory and change there:
 
-    mkdir -p "$BUILDROOT/build/musl"
-    cd "$BUILDROOT/build/musl"
-
-    srcdir="$BUILDROOT/src/musl-1.2.2"
+	mkdir -p $EFS_ROOT/build/musl
+	cd $EFS_ROOT/build/musl
 
 Musl is quite easy to build but requires some special handling, because it
 doesn't use autotools. The configure script is actually a hand written shell
 script that tries to emulate some of the typical autotools handling:
 
-    CC="${TARGET}-gcc" $srcdir/configure --prefix=/ --includedir=/usr/include \
+    CC="${TARGET}-gcc" ../../src/musl-VERSION/configure --prefix=/ --includedir=/usr/include \
                                          --target="$TARGET"
 
 We override the shell variable **CC** to point to the cross compiler that we
@@ -504,10 +493,9 @@ just built. Remember, we added **$TCDIR/bin** to our **PATH**.
 We also set the compiler for actually compiling musl and we explicitly set
 the **DESTDIR** variable for installing:
 
-    CC="${TARGET}-gcc" make
-    make DESTDIR="$SYSROOT" install
-
-    cd "$BUILDROOT"
+	CC="${TARGET}-gcc" make -j$(nproc)
+	make DESTDIR=$SYSROOT install -j$(nproc)
+	cd $EFS_ROOT
 
 The important part here, that later also applies for autotools based stuff, is
 that we don't set **--prefix** to the sysroot directory. We set the prefix so
@@ -529,21 +517,19 @@ in `/usr/include`, so we explicitly specifiy the **--includedir**.
 We are reusing the same source code from the first stage, but in a different
 build directory:
 
-    mkdir -p "$BUILDROOT/build/gcc-2"
-    cd "$BUILDROOT/build/gcc-2"
-
-    srcdir="$BUILDROOT/src/gcc-10.2.0"
+	mkdir -p $EFS_ROOT/build/gcc-2
+	cd $EFS_ROOT/build/gcc-2
 
 Most of the configure options should be familiar already:
 
-    $srcdir/configure --prefix="$TCDIR" --target="$TARGET" --build="$HOST" \
-                      --host="$HOST" --with-sysroot="$SYSROOT" \
+	../../src/gcc-VERSION/configure --prefix=$TCDIR --target=$TARGET --build=$HOST \
+                      --host=$HOST --with-sysroot=$SYSROOT \
                       --disable-nls --enable-languages=c,c++ \
                       --enable-c99 --enable-long-long \
                       --disable-libmudflap --disable-multilib \
-                      --disable-libsanitizer --with-arch="$CPU" \
+                      --disable-libsanitizer --with-arch=$TARGET_ARCH \
                       --with-native-system-header-dir="/usr/include" \
-                      --with-float=hard --with-fpu=neon-vfpv3
+                      --with-float=hard --with-fpu=$TARGET_FPU
 
 For the second pass, we also build a C++ compiler. The options **--enable-c99**
 and **--enable-long-long** are actually C++ specific. When our final compiler
@@ -576,10 +562,9 @@ headers somewhere else in the previous steps and have it look there.
 
 All that's left now is building and installing the compiler:
 
-    make
-    make install
-
-    cd "$BUILDROOT"
+	make -j$(nproc)
+	make -j$(nproc) install
+	cd $EFS_ROOT
 
 This time, we are going to build and install *everything*. You *really* want to
 do a parallel build here. On my AMD Ryzen based desktop PC, building with
@@ -625,3 +610,4 @@ Statically linking it should solve the problem:
 This binary now does not require any libraries, any interpreters and does
 system calls directly. It should now run on your favourite Raspberry Pi
 distribution as-is.
+
