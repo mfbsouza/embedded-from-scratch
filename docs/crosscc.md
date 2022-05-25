@@ -36,25 +36,25 @@ Simply download the packages listed and unpack them into `src`.
 
 Right now, you should have a directory tree that looks something like this:
 
-.
-├── build
-├── src
-│   ├── binutils-VERSION
-│   ├── gcc-VERSION
-│   ├── linux-VERSION
-│   └── musl-VERSION
-├── sysroot
-│   ├── bin -> usr/bin
-│   ├── lib -> usr/lib
-│   ├── sbin -> usr/sbin
-│   └── usr
-│       ├── bin
-│       ├── include
-│       ├── lib
-│       ├── sbin
-│       └── share
-└── toolchain
-    └── bin
+	.
+	├── build
+	├── src
+	│   ├── binutils-VERSION
+	│   ├── gcc-VERSION
+	│   ├── linux-VERSION
+	│   └── musl-VERSION
+	├── sysroot
+	│   ├── bin -> usr/bin
+	│   ├── lib -> usr/lib
+	│   ├── sbin -> usr/sbin
+	│   └── usr
+	│       ├── bin
+	│       ├── include
+	│       ├── lib
+	│       ├── sbin
+	│       └── share
+	└── toolchain
+	    └── bin
 
 For building GCC, we will need to download some additional support libraries.
 Namely gmp, mfpr, mpc and isl that have to be unpacked inside the GCC source
@@ -83,7 +83,7 @@ library we are using and *where* to find it. For dynamically linked programs,
 it also needs to know what loader we are going to use, which is typically
 also provided by the C standard library. For more details, you can read this
 high level overview 
-[how dyncamically linked ELF programs are run](docs/elfstartup.md).
+[how dyncamically linked ELF programs are run](elfstartup.md).
 
 Second, there is [libgcc](https://gcc.gnu.org/onlinedocs/gccint/Libgcc.html).
 `libgcc` contains low level platform specific helpers (like exception handling, 
