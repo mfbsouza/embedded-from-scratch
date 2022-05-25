@@ -23,14 +23,17 @@ The following source packages are required for building the toolchain. The
 links below point to the exact versions that I used.
 
 * [Linux](https://kernel.org/).
-  Linux is a very popular OS kernel that we will use on our target system.
-  We need it (specifically the kernel headers) to build the the C standard 
-  library for our toolchain.
-* [Musl](https://www.musl-libc.org/). A tiny C standard library implementation.
-* [Binutils](https://www.gnu.org/software/binutils/). This contains the GNU
-  assembler, linker and various tools for working with executable files.
-* [GCC](https://gcc.gnu.org/), the GNU compiler collection. Contains compilers 
-  for C and other languages.
+	* Linux is a very popular OS kernel that we will use on our target 
+	system. We need it (specifically the kernel headers) to build the C 
+	standard library for our toolchain.
+* [Musl](https://www.musl-libc.org/). 
+	* A tiny C standard library implementation.
+* [Binutils](https://www.gnu.org/software/binutils/).
+	* This contains the GNU assembler, linker and various tools for 
+	working with executable files.
+* [GCC](https://gcc.gnu.org/). 
+	* the GNU compiler collection. Contains compilers for C and 
+	other languages.
 
 Simply download the packages listed and unpack them into `src`.
 
